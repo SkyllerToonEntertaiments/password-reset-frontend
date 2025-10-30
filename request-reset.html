@@ -9,17 +9,46 @@
   </form>
   <div id="msg"></div>
   <script>
+    const FUNCTION_BASE = 'https://hidlpxxbovmqrqgikess.supabase.co/functions/v1/dynamic-api';
     const form = document.getElementById('reqForm');
+
+    async function parseResponse(res) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) {
+        return res.json();
+      }
+      // fallback to text for HTML/errors
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch {
+        return { error: text };
+      }
+    }
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      document.getElementById('msg').textContent = 'Enviando...';
       const email = document.getElementById('email').value;
-      const res = await fetch('/.netlify/functions/password-reset/request-reset', { // se usar Vercel/GH, ajuste a URL para a função
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-      const j = await res.json();
-      document.getElementById('msg').textContent = j.error || 'Se o email existir, você receberá instruções.';
+
+      try {
+        const res = await fetch(FUNCTION_BASE + '/request-reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+
+        const body = await parseResponse(res);
+
+        if (res.ok) {
+          document.getElementById('msg').textContent = body.message || 'Se o email existir, você receberá instruções.';
+        } else {
+          document.getElementById('msg').textContent = body.error || 'Erro ao solicitar redefinição.';
+        }
+      } catch (err) {
+        console.error(err);
+        document.getElementById('msg').textContent = 'Erro de rede.';
+      }
     });
   </script>
 </body>
