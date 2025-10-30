@@ -3,213 +3,139 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Redefinir senha</title>
-
-  <!-- Favicon embutido (data URL) para evitar 404 /favicon.ico -->
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='14' font-size='14'%3E%F0%9F%94%92%3C/text%3E%3C/svg%3E">
-
+  <title>Reset de Senha - Teste Supabase</title>
   <style>
-    :root{--bg:#f7fafc;--card:#fff;--accent:#0f172a;--muted:#64748b}
-    body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;padding:24px;background:var(--bg);color:var(--accent)}
-    .container{max-width:480px;margin:40px auto;background:var(--card);padding:28px;border-radius:12px;box-shadow:0 8px 30px rgba(2,6,23,0.08)}
-    h1{margin:0 0 10px;font-size:20px}
-    p.lead{margin:0 0 18px;color:var(--muted)}
-    label{display:block;margin-top:12px;font-size:13px;color:var(--muted)}
-    input[type="password"], input[type="email"], input[type="text"]{width:100%;padding:10px 12px;margin-top:6px;border:1px solid #e6eef8;border-radius:8px;font-size:14px;background:#fbfdff}
-    button{margin-top:18px;padding:10px 14px;border-radius:8px;border:0;background:#2563eb;color:#fff;font-weight:600;cursor:pointer}
-    button[disabled]{opacity:0.6;cursor:not-allowed}
-    .msg{margin-top:14px;padding:10px;border-radius:8px}
-    .msg.success{background:#ecfdf5;color:#065f46}
-    .msg.error{background:#fff1f2;color:#9f1239}
-    .hint{font-size:13px;color:var(--muted);margin-top:10px}
-    .small{font-size:13px;color:var(--muted)}
-    .hidden{display:none}
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; padding: 24px; max-width: 720px; margin: auto; }
+    input, button { font-size: 16px; padding: 8px; margin: 6px 0; width: 100%; box-sizing: border-box; }
+    .hidden { display: none; }
+    .msg { margin: 8px 0; padding: 10px; border-radius: 6px; }
+    .success { background: #e6ffed; color: #037a3b; }
+    .error { background: #ffe6e6; color: #9b1c1c; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Redefinir sua senha</h1>
-    <p class="lead">Cole o link que recebeu por e-mail aqui ou abra o link diretamente. Se o link contiver <code>?access_token=...</code>, a página já deve ler automaticamente.</p>
+  <h1>Reset de Senha (Teste)</h1>
 
-    <!-- Campo para testar/colar a URL (opcional) -->
-    <label for="urlInput">Link de reset (opcional)</label>
-    <input id="urlInput" type="text" placeholder="Cole a URL do e-mail aqui (ou deixe em branco)" />
+  <div id="status" class="msg"></div>
 
-    <div id="tokenNotice" class="hint hidden">Token detectado — prossiga para redefinir a senha.</div>
-
-    <div id="pwForm" class="hidden">
-      <label for="newPassword">Nova senha</label>
-      <input id="newPassword" type="password" autocomplete="new-password" />
-
-      <label for="confirmPassword">Confirmar nova senha</label>
-      <input id="confirmPassword" type="password" autocomplete="new-password" />
-
-      <button id="submitBtn">Redefinir senha</button>
-
-      <div id="message" class="msg hidden"></div>
-      <div id="finalNote" class="small hidden">Senha alterada com sucesso. Você pode agora entrar com a nova senha.</div>
-    </div>
-
-    <div id="noToken" class="hidden">
-      <p class="small">Se você não tem um link, solicite um novo reset pela sua página de "esqueci minha senha".</p>
-    </div>
+  <!-- Formulário opcional para solicitar email de reset -->
+  <div id="request-reset">
+    <h2>Solicitar link de reset</h2>
+    <input id="email-request" type="email" placeholder="Seu email" />
+    <button id="btn-request">Enviar link de reset</button>
   </div>
 
-  <script>
-    (function () {
-      // CONFIG: Troque SUPABASE_URL se quiser usar JS lib, mas aqui usamos apenas REST.
-      // O endpoint usado abaixo é: POST /auth/v1/user (não utilizado) — vamos usar "reset password using token" via endpoint de update de usuário:
-      // Supabase Auth permite trocar senha via endpoint /auth/v1/reset-password?access_token=... mas preferimos usar /auth/v1/user com Authorization Bearer <token> e body { password }
-      // Assunção: SUPABASE_URL termina sem barra, ex: https://xyzcompany.supabase.co
-      const SUPABASE_URL = 'https://hidlpxxbovmqrqgikess.supabase.co' || ''; // opcionalmente injetar via replace no deploy
+  <!-- Form de nova senha (aparece se houver token na URL) -->
+  <div id="set-password" class="hidden">
+    <h2>Definir nova senha</h2>
+    <input id="new-password" type="password" placeholder="Nova senha" />
+    <input id="confirm-password" type="password" placeholder="Confirmar nova senha" />
+    <button id="btn-set">Definir senha</button>
+  </div>
 
-      // Helper: exibe mensagens
-      const $ = id => document.getElementById(id);
-      const show = (el) => el.classList.remove('hidden');
-      const hide = (el) => el.classList.add('hidden');
-      const setMsg = (text, type='error') => {
-        const m = $('message');
-        m.textContent = text;
-        m.className = 'msg ' + (type === 'success' ? 'success' : 'error');
-        show(m);
-      };
+  <script type="module">
+    // ----- CONFIGURE AQUI: cole sua ANON KEY entre aspas -----
+    const SUPABASE_URL = 'https://hidlpxxbovmqrqgikess.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpZGxweHhib3ZtcXJxZ2lrZXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMTU5NDQsImV4cCI6MjA3NjY5MTk0NH0.auN-zYkqqBzSdcdHsOGU-PciX6LZiF19dtPmPOYZCZA';
+    // ---------------------------------------------------------
 
-      // Lê token da query string
-      function getAccessTokenFromURL(urlString) {
-        try {
-          const u = urlString ? new URL(urlString, location.origin) : new URL(location.href);
-          return u.searchParams.get('access_token') || null;
-        } catch (e) {
-          return null;
+    // Validações básicas
+    if (!SUPABASE_URL || SUPABASE_URL.includes('hidlpxxbovmqrqgikess') && SUPABASE_ANON_KEY === 'COLE_AQUI_SUA_ANON_KEY') {
+      document.getElementById('status').className = 'msg error';
+      document.getElementById('status').textContent = 'Erro: cole sua SUPABASE_ANON_KEY no arquivo antes de testar.';
+      throw new Error('Missing ANON KEY');
+    }
+
+    // Import ligero do supabase-js via CDN (compatível para teste rápido).
+    // Em produção, prefira instalar via npm e usar build.
+    import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm').then(({ createClient }) => {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      const statusEl = document.getElementById('status');
+      const setPasswordEl = document.getElementById('set-password');
+      const requestResetEl = document.getElementById('request-reset');
+
+      // Ler access_token da URL
+      const url = new URL(window.location.href);
+      const accessToken = url.searchParams.get('access_token');
+
+      function showMessage(text, type = 'success') {
+        statusEl.className = 'msg ' + (type === 'error' ? 'error' : 'success');
+        statusEl.textContent = text;
+      }
+
+      // Se tiver token, troque sessão e permita definir nova senha
+      (async function handleToken() {
+        if (!accessToken) {
+          // Sem token: mostrar opção de solicitar reset
+          requestResetEl.classList.remove('hidden');
+          setPasswordEl.classList.add('hidden');
+          showMessage('Sem token de reset na URL. Você pode solicitar um link de reset abaixo.');
+          return;
         }
-      }
 
-      // Inicialização
-      const urlInput = $('urlInput');
-      const pwForm = $('pwForm');
-      const noToken = $('noToken');
-      const tokenNotice = $('tokenNotice');
-      const submitBtn = $('submitBtn');
-      const newPassword = $('newPassword');
-      const confirmPassword = $('confirmPassword');
-      const finalNote = $('finalNote');
+        showMessage('Token detectado. Validando...');
 
-      // Checa inicialmente
-      let token = getAccessTokenFromURL();
-      if (token) {
-        urlInput.value = location.href;
-        show(tokenNotice);
-        show(pwForm);
-      } else {
-        show(noToken);
-      }
+        // Tenta setar a sessão usando o token (isso autentica o usuário temporariamente)
+        const { data, error } = await supabase.auth.setSession({ access_token: accessToken });
 
-      // Se usuário colar uma URL manualmente
-      urlInput.addEventListener('change', (e) => {
-        const v = e.target.value.trim();
-        const t = getAccessTokenFromURL(v);
-        if (t) {
-          token = t;
-          show(tokenNotice);
-          show(pwForm);
-          hide(noToken);
+        if (error) {
+          showMessage('Erro ao validar token: ' + (error.message || error), 'error');
+          // Ainda permitir solicitar novo reset
+          requestResetEl.classList.remove('hidden');
+          setPasswordEl.classList.add('hidden');
+          return;
+        }
+
+        // Sessão válida -> mostrar formulário para nova senha
+        showMessage('Token validado. Preencha a nova senha abaixo.');
+        setPasswordEl.classList.remove('hidden');
+        requestResetEl.classList.add('hidden');
+      })();
+
+      // Handler: solicitar envio de link de reset por email
+      document.getElementById('btn-request').addEventListener('click', async () => {
+        const email = document.getElementById('email-request').value.trim();
+        if (!email) return showMessage('Informe um email válido.', 'error');
+
+        showMessage('Enviando link de reset...');
+        const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin // opcional: define onde o link deve redirecionar
+        });
+
+        if (error) {
+          showMessage('Erro ao enviar link: ' + (error.message || error), 'error');
         } else {
-          token = null;
-          hide(tokenNotice);
-          hide(pwForm);
-          show(noToken);
+          showMessage('Link de reset enviado (verifique seu email).');
         }
       });
 
-      // Validação de senha simples
-      function validatePasswords(pw, pw2) {
-        if (!pw || pw.length < 8) return 'A senha deve ter ao menos 8 caracteres.';
-        if (pw !== pw2) return 'As senhas não conferem.';
-        return null;
-      }
+      // Handler: definir nova senha (usuário já autenticado via token)
+      document.getElementById('btn-set').addEventListener('click', async () => {
+        const pwd = document.getElementById('new-password').value;
+        const pwd2 = document.getElementById('confirm-password').value;
+        if (!pwd || pwd.length < 6) return showMessage('Senha precisa ter pelo menos 6 caracteres.', 'error');
+        if (pwd !== pwd2) return showMessage('As senhas não conferem.', 'error');
 
-      // Função que chama Supabase Auth para atualizar senha usando token
-      async function resetPasswordWithToken(accessToken, password) {
-        // Determine base URL do Supabase - se SUPABASE_URL não estiver configurada, tentamos inferir do meta tag ou avisamos.
-        let base = SUPABASE_URL;
-        if (!base) {
-          // tenta inferir de window.location.origin + '/supabase'??? Não podemos adivinhar. Exigir que o usuário configure SUPABASE_URL
-          throw new Error('SUPABASE_URL não configurado. Defina a variável SUPABASE_URL no seu HTML ou no ambiente do Vercel.');
-        }
+        showMessage('Alterando senha...');
+        // Usamos updateUser (v2) para atualizar a senha do usuário autenticado
+        const { data, error } = await supabase.auth.updateUser({ password: pwd });
 
-        // Endpoint para trocar senha via JWT: PATCH /auth/v1/user com Authorization: Bearer <access_token>
-        const endpoint = base.replace(/\/$/, '') + '/auth/v1/user';
-
-        const res = await fetch(endpoint, {
-          method: 'PUT', // Supabase aceita PUT ou PATCH dependendo da versão; PUT é compatível.
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + accessToken,
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({ password })
-        });
-
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          // Erro comum: token inválido ou expirado
-          const msg = data?.error_description || data?.error || data?.message || 'Erro ao redefinir a senha.';
-          throw new Error(msg);
-        }
-        return data;
-      }
-
-      submitBtn.addEventListener('click', async () => {
-        hide($('message'));
-        if (!token) {
-          setMsg('Token não encontrado. Cole a URL completa recebida por e-mail e tente novamente.');
-          return;
-        }
-        const pw = newPassword.value.trim();
-        const pw2 = confirmPassword.value.trim();
-        const vErr = validatePasswords(pw, pw2);
-        if (vErr) {
-          setMsg(vErr);
-          return;
-        }
-
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Aguarde...';
-
-        try {
-          const result = await resetPasswordWithToken(token, pw);
-          // Sucesso
-          setMsg('Senha alterada com sucesso!', 'success');
-          show(finalNote);
-          // Opcional: limpar campos e token
-          newPassword.value = '';
-          confirmPassword.value = '';
-          // Se quiser, redirecionar para login depois de alguns segundos
-          // setTimeout(() => location.href = '/login', 2500);
-        } catch (err) {
-          setMsg(err.message || String(err));
-        } finally {
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Redefinir senha';
+        if (error) {
+          showMessage('Erro ao alterar senha: ' + (error.message || error), 'error');
+        } else {
+          showMessage('Senha alterada com sucesso. Você está autenticado.');
+          // Opcional: redirecionar para dashboard
+          // window.location.href = '/dashboard';
         }
       });
 
-      // Validação rápida no enter
-      [newPassword, confirmPassword].forEach(el => {
-        el.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') submitBtn.click();
-        });
-      });
+    }).catch((err) => {
+      document.getElementById('status').className = 'msg error';
+      document.getElementById('status').textContent = 'Erro ao carregar supabase-js: ' + err;
+      console.error(err);
+    });
 
-      // Pequena melhoria: se SUPABASE_URL não estiver definida, mostra instrução para configurar
-      if (!SUPABASE_URL) {
-        const helper = document.createElement('div');
-        helper.className = 'hint';
-        helper.style.marginTop = '12px';
-        helper.innerHTML = 'Configuração: defina a variável <code>SUPABASE_URL</code> na página (edite o arquivo HTML) com a URL do seu projeto Supabase (ex.: https://xyzcompany.supabase.co).';
-        document.querySelector('.container').appendChild(helper);
-      }
-    })();
   </script>
 </body>
 </html>
