@@ -61,7 +61,7 @@
       // O endpoint usado abaixo é: POST /auth/v1/user (não utilizado) — vamos usar "reset password using token" via endpoint de update de usuário:
       // Supabase Auth permite trocar senha via endpoint /auth/v1/reset-password?access_token=... mas preferimos usar /auth/v1/user com Authorization Bearer <token> e body { password }
       // Assunção: SUPABASE_URL termina sem barra, ex: https://xyzcompany.supabase.co
-      const SUPABASE_URL = window.SUPABASE_URL || ''; // opcionalmente injetar via replace no deploy
+      const SUPABASE_URL = 'https://hidlpxxbovmqrqgikess.supabase.co' || ''; // opcionalmente injetar via replace no deploy
 
       // Helper: exibe mensagens
       const $ = id => document.getElementById(id);
