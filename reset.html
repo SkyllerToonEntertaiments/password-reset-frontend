@@ -1,45 +1,142 @@
 <!doctype html>
-<html>
-<head><meta charset="utf-8"><title>Redefinir senha</title></head>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Redefinir senha</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Roboto, "Helvetica Neue", Arial; padding: 2rem; max-width: 480px; margin: auto; }
+    label { display:block; margin-top:1rem; }
+    input { width:100%; padding:0.6rem; margin-top:0.4rem; box-sizing:border-box; }
+    button { margin-top:1rem; padding:0.7rem 1rem; cursor:pointer; }
+    .msg { margin-top:1rem; padding:0.75rem; border-radius:6px; }
+    .error { background:#ffe8e8; color:#900; }
+    .success { background:#e6ffed; color:#006400; }
+  </style>
+</head>
 <body>
   <h1>Redefinir senha</h1>
-  <form id="resetForm">
-    <input type="password" id="new_password" placeholder="Nova senha" required minlength="8" />
-    <button type="submit">Redefinir</button>
-  </form>
-  <div id="msg"></div>
+  <div id="info">Carregando...</div>
+
+  <div id="form" style="display:none;">
+    <p>Digite sua nova senha:</p>
+    <label>
+      Nova senha
+      <input id="password" type="password" autocomplete="new-password" />
+    </label>
+    <label>
+      Confirmar nova senha
+      <input id="passwordConfirm" type="password" autocomplete="new-password" />
+    </label>
+    <button id="submit">Alterar senha</button>
+    <div id="result"></div>
+  </div>
 
   <script>
-    const params = new URLSearchParams(location.search);
-    const token = params.get('token');
-    if (!token) {
-      document.getElementById('msg').textContent = 'Token ausente.';
-      document.getElementById('resetForm').style.display = 'none';
-    }
+    (function () {
+      // --- CONFIGURE AQUI ---
+      const SUPABASE_URL = "https://YOUR_SUPABASE_URL"; // ex: https://xyzcompany.supabase.co
+      // -----------------------
 
-    document.getElementById('resetForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const new_password = document.getElementById('new_password').value;
-      document.getElementById('msg').textContent = 'Enviando...';
+      const params = new URLSearchParams(window.location.search);
 
-      try {
-        const res = await fetch('https://hidlpxxbovmqrqgikess.supabase.co/functions/v1/dynamic-api/confirm-reset', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token, new_password })
-        });
+      // Tente múltiplos nomes comuns de token (supabase pode usar access_token ou token)
+      const token = params.get("access_token") || params.get("token") || params.get("oobCode");
 
-        const j = await res.json().catch(() => ({}));
-        if (res.ok) {
-          document.getElementById('msg').textContent = 'Senha atualizada com sucesso.';
-        } else {
-          document.getElementById('msg').textContent = j.error || 'Erro ao redefinir a senha.';
-        }
-      } catch (err) {
-        console.error(err);
-        document.getElementById('msg').textContent = 'Erro de rede.';
+      const infoEl = document.getElementById("info");
+      const formEl = document.getElementById("form");
+      const resultEl = document.getElementById("result");
+      const passEl = document.getElementById("password");
+      const passConfEl = document.getElementById("passwordConfirm");
+      const submitBtn = document.getElementById("submit");
+
+      function showMessage(text, type) {
+        resultEl.innerHTML = "";
+        const d = document.createElement("div");
+        d.className = "msg " + (type === "error" ? "error" : "success");
+        d.textContent = text;
+        resultEl.appendChild(d);
       }
-    });
+
+      if (!token) {
+        infoEl.textContent = "Token não encontrado na URL. Verifique se o link de recuperação contém o token como query param (ex.: ?access_token=...).";
+        return;
+      }
+
+      // Token encontrado
+      infoEl.style.display = "none";
+      formEl.style.display = "block";
+
+      async function handleSubmit() {
+        resultEl.innerHTML = "";
+
+        const password = passEl.value.trim();
+        const passwordConfirm = passConfEl.value.trim();
+
+        if (!password) {
+          showMessage("Senha não pode ser vazia.", "error");
+          return;
+        }
+        if (password !== passwordConfirm) {
+          showMessage("As senhas não coincidem.", "error");
+          return;
+        }
+        if (password.length < 6) {
+          showMessage("Senha deve ter pelo menos 6 caracteres.", "error");
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Aguarde...";
+
+        try {
+          // Chamada ao endpoint user para atualizar a senha usando o token do usuário
+          // Endpoint: POST /auth/v1/user?provider= (quando usando token do usuário)
+          // Supabase aceita PATCH /auth/v1/user com Authorization: Bearer <access_token>
+          const resp = await fetch(SUPABASE_URL + "/auth/v1/user", {
+            method: "PUT", // alguns projetos usam PUT, mas PUT ou PATCH ambos funcionam; iremos usar PUT
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer " + token
+            },
+            body: JSON.stringify({ password })
+          });
+
+          const data = await resp.json();
+
+          if (!resp.ok) {
+            // Mensagem de erro retornada pelo Supabase
+            const msg = (data && data.error_description) || (data && data.error) || JSON.stringify(data);
+            showMessage("Erro ao alterar senha: " + msg, "error");
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Alterar senha";
+            return;
+          }
+
+          showMessage("Senha alterada com sucesso. Você já pode fazer login com a nova senha.", "success");
+
+          // Opcional: redirecionar para login after delay
+          setTimeout(() => {
+            if (!window.opener) {
+              window.location.href = "/"; // ajuste para sua página de login
+            } else {
+              window.close();
+            }
+          }, 2200);
+        } catch (err) {
+          showMessage("Erro de rede: " + err.message, "error");
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Alterar senha";
+        }
+      }
+
+      submitBtn.addEventListener("click", handleSubmit);
+
+      // Permitir envio com Enter
+      passConfEl.addEventListener("keypress", function(e) {
+        if (e.key === "Enter") handleSubmit();
+      });
+    })();
   </script>
 </body>
 </html>
