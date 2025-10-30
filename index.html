@@ -26,7 +26,7 @@
 <body>
   <div class="container">
     <h1>Redefinir sua senha</h1>
-    <p class="lead">Se o link contiver <code>?access_token=...</code>, a página detecta automaticamente.</p>
+    <p class="lead">Se o link contiver <code>#access_token=...</code>, a página detecta automaticamente.</p>
 
     <label for="urlInput">Link de reset (opcional)</label>
     <input id="urlInput" type="text" placeholder="Cole a URL do e-mail aqui" />
@@ -44,12 +44,12 @@
     </div>
 
     <div id="noToken" class="hidden">
-      <p class="small">Se o token não foi detectado, solicite um novo link de recuperação.</p>
+      <p class="small">Token não encontrado. Solicite um novo link de recuperação.</p>
     </div>
   </div>
 
   <script>
-    (function () {
+    (async function () {
       const SUPABASE_URL = 'https://hidlpxxbovmqrqgikess.supabase.co';
       const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpZGxweHhib3ZtcXJxZ2lrZXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMTU5NDQsImV4cCI6MjA3NjY5MTk0NH0.auN-zYkqqBzSdcdHsOGU-PciX6LZiF19dtPmPOYZCZA';
 
@@ -63,95 +63,20 @@
         show(m);
       };
 
-      function getToken(urlString) {
-        try {
-          const u = urlString ? new URL(urlString, location.origin) : new URL(location.href);
-          return u.searchParams.get('access_token');
-        } catch { return null; }
+      function extractToken() {
+        const url = new URL(location.href);
+        //  ✅ Agora lê token no hash (#)
+        const hashParams = new URLSearchParams(location.hash.slice(1));
+        const token = hashParams.get('access_token');
+        const type = hashParams.get('type');
+        return (type === 'recovery' && token) ? token : null;
       }
 
-      const urlInput = $('urlInput');
-      const pwForm = $('pwForm');
-      const tokenNotice = $('tokenNotice');
-      const noToken = $('noToken');
-      const submitBtn = $('submitBtn');
-      const newPassword = $('newPassword');
-      const confirmPassword = $('confirmPassword');
-      const finalNote = $('finalNote');
-
-      let token = getToken();
-
-      if (token) {
-        urlInput.value = location.href;
-        show(tokenNotice);
-        show(pwForm);
-      } else {
-        show(noToken);
-      }
-
-      urlInput.addEventListener('change', (e) => {
-        token = getToken(e.target.value.trim());
-        if (token) {
-          hide(noToken);
-          show(tokenNotice);
-          show(pwForm);
-        } else {
-          hide(tokenNotice);
-          hide(pwForm);
-          show(noToken);
-        }
-      });
-
-      function validate(pw, pw2) {
-        if (!pw || pw.length < 8) return 'A senha deve ter ao menos 8 caracteres.';
-        if (pw !== pw2) return 'As senhas não conferem.';
-        return null;
-      }
-
-      async function resetPassword(accessToken, password) {
-        const endpoint = SUPABASE_URL + '/auth/v1/user';
-        const res = await fetch(endpoint, {
-          method: 'PUT',
+      async function updateSession(token) {
+        // ✅ Essencial para Supabase aceitar reset
+        await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=password', {
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + accessToken,
             'apikey': SUPABASE_ANON_KEY,
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({ password })
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data?.error_description || data?.message || 'Erro ao redefinir a senha.');
-        return data;
-      }
-
-      submitBtn.addEventListener('click', async () => {
-        hide($('message'));
-
-        if (!token) return setMsg('Token não encontrado.');
-
-        const pw = newPassword.value.trim();
-        const pw2 = confirmPassword.value.trim();
-
-        const err = validate(pw, pw2);
-        if (err) return setMsg(err);
-
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Aguarde...';
-
-        try {
-          await resetPassword(token, pw);
-          setMsg('Senha alterada com sucesso!', 'success');
-          show(finalNote);
-          newPassword.value = confirmPassword.value = '';
-        } catch (e) {
-          setMsg(e.message);
-        } finally {
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Redefinir senha';
-        }
-      });
-    })();
-  </script>
-</body>
-</html>
+            'Authorization': 'B
