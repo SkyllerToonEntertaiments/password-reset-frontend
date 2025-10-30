@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Redefinir senha</title></head>
+<body>
+  <h1>Redefinir senha</h1>
+  <form id="resetForm">
+    <input type="password" id="new_password" placeholder="Nova senha" required minlength="8" />
+    <button type="submit">Redefinir</button>
+  </form>
+  <div id="msg"></div>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const token = params.get('token');
+    if (!token) {
+      document.getElementById('msg').textContent = 'Token ausente.';
+      document.getElementById('resetForm').style.display = 'none';
+    }
+
+    document.getElementById('resetForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const new_password = document.getElementById('new_password').value;
+      document.getElementById('msg').textContent = 'Enviando...';
+
+      try {
+        const res = await fetch('https://hidlpxxbovmqrqgikess.supabase.co/functions/v1/dynamic-api/confirm-reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, new_password })
+        });
+
+        const j = await res.json().catch(() => ({}));
+        if (res.ok) {
+          document.getElementById('msg').textContent = 'Senha atualizada com sucesso.';
+        } else {
+          document.getElementById('msg').textContent = j.error || 'Erro ao redefinir a senha.';
+        }
+      } catch (err) {
+        console.error(err);
+        document.getElementById('msg').textContent = 'Erro de rede.';
+      }
+    });
+  </script>
+</body>
+</html>

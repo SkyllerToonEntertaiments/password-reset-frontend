@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Solicitar redefinição</title></head>
+<body>
+  <h1>Solicitar redefinição de senha</h1>
+  <form id="reqForm">
+    <input type="email" id="email" placeholder="seu@exemplo.com" required />
+    <button type="submit">Enviar email de redefinição</button>
+  </form>
+  <div id="msg"></div>
+  <script>
+    const form = document.getElementById('reqForm');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const res = await fetch('/.netlify/functions/password-reset/request-reset', { // se usar Vercel/GH, ajuste a URL para a função
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const j = await res.json();
+      document.getElementById('msg').textContent = j.error || 'Se o email existir, você receberá instruções.';
+    });
+  </script>
+</body>
+</html>
