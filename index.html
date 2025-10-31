@@ -60,7 +60,7 @@
       updateBtn.textContent = 'Atualizando...'
 
       try {
-        const { error } = await supabase.auth.updateUser({ password: pass })
+        const { data, error } = await supabase.auth.updateUser({ password: pass })
         if (error) throw error
         updateSuccess.style.display = 'block'
         updateSuccess.textContent = 'Senha atualizada com sucesso.'
@@ -73,7 +73,7 @@
       }
     })
 
-    supabase.auth.onAuthStateChange((event) => {
+    supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
         updateStatus.textContent = 'Link de recuperação detectado — você pode agora definir uma nova senha.'
       }
