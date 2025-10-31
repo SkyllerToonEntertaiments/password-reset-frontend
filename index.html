@@ -121,7 +121,7 @@
       try {
         // O usuário normalmente já estará autenticado automaticamente após clicar no link do e‑mail.
         // Se não estiver, você precisa capturar o token do URL e trocá‑lo por sessão (fluxos avançados).
-        const { data, error } = await supabase.auth.update({ password: pass })
+        const { data, error } = await supabase.auth.updateUser({ password: pass })
         if (error) throw error
         updateSuccess.style.display = 'block'
         updateSuccess.textContent = 'Senha atualizada com sucesso.'
