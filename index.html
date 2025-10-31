@@ -42,62 +42,65 @@
   <!-- ✅ Carrega Supabase JS antes do script -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- ✅ Seu script — sempre no FINAL do BODY -->
-  <script type="module">
-    const SUPABASE_URL = "https://hidlpxxbovmqrqgikess.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpZGxweHhib3ZtcXJxZ2lrZXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMTU5NDQsImV4cCI6MjA3NjY5MTk0NH0.auN-zYkqqBzSdcdHsOGU-PciX6LZiF19dtPmPOYZCZA"; // ✅ TROQUE!
+<script type="module">
+  const SUPABASE_URL = "https://hidlpxxbovmqrqgikess.supabase.co";
+  const SUPABASE_ANON_KEY = "COLOQUE_SUA_ANON_KEY_AQUI";
 
-    const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const $ = id => document.getElementById(id);
-    const show = el => el.classList.remove('hidden');
-    const hide = el => el.classList.add('hidden');
+  const $ = id => document.getElementById(id);
+  const show = el => el.classList.remove('hidden');
+  const hide = el => el.classList.add('hidden');
+  const message = $('message');
+  const finalNote = $('finalNote');
+  const newPassword = $('newPassword');
+  const confirmPassword = $('confirmPassword');
+  const submitBtn = $('submitBtn');
 
-    const message = $('message');
-    const finalNote = $('finalNote');
-    const newPassword = $('newPassword');
-    const confirmPassword = $('confirmPassword');
-    const submitBtn = $('submitBtn');
+  function setMsg(text, type = 'error') {
+    message.textContent = text;
+    message.className = 'msg ' + (type === 'success' ? 'success' : 'error');
+    show(message);
+  }
 
-    function setMsg(text, type = 'error') {
-      message.textContent = text;
-      message.className = 'msg ' + (type === 'success' ? 'success' : 'error');
-      show(message);
+  // ✅ inicializa sessão com o token da URL
+  const hash = window.location.hash.substring(1);
+  const search = window.location.search;
+  const params = new URLSearchParams(hash || search);
+
+  const access_token = params.get("access_token");
+  const refresh_token = params.get("refresh_token");
+
+  if (access_token) {
+    await client.auth.setSession({ access_token, refresh_token });
+  }
+
+  submitBtn.addEventListener("click", async () => {
+    hide(message);
+
+    const pw = newPassword.value.trim();
+    const pw2 = confirmPassword.value.trim();
+    if (!pw || pw.length < 8) return setMsg('A senha deve ter ao menos 8 caracteres.');
+    if (pw !== pw2) return setMsg('As senhas não conferem.');
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Aguarde...";
+
+    try {
+      const { error } = await client.auth.updateUser({ password: pw });
+      if (error) throw error;
+
+      setMsg("Senha alterada com sucesso!", "success");
+      show(finalNote);
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Redefinir senha";
+      newPassword.value = confirmPassword.value = "";
     }
+  });
+</script>
 
-    function validate(pw, pw2) {
-      if (!pw || pw.length < 8) return 'A senha deve ter ao menos 8 caracteres.';
-      if (pw !== pw2) return 'As senhas não conferem.';
-      return null;
-    }
-
-    submitBtn.addEventListener("click", async () => {
-      hide(message);
-
-      const pw = newPassword.value.trim();
-      const pw2 = confirmPassword.value.trim();
-      const err = validate(pw, pw2);
-      if (err) return setMsg(err);
-
-      submitBtn.disabled = true;
-      submitBtn.textContent = "Aguarde...";
-
-      try {
-        const { error } = await client.auth.updateUser({ password: pw });
-        
-        if (error) throw error;
-
-        setMsg("Senha alterada com sucesso!", "success");
-        show(finalNote);
-
-        newPassword.value = confirmPassword.value = "";
-      } catch (err) {
-        setMsg(err.message);
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Redefinir senha";
-      }
-    });
-  </script>
 </body>
 </html>
