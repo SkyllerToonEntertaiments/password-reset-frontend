@@ -87,7 +87,7 @@
     submitBtn.textContent = "Aguarde...";
 
     try {
-      const { error } = await client.auth.updateUser({ password: pw });
+      const { data, error } = await client.auth.updateUser({ password: pw });
       if (error) throw error;
 
       setMsg("Senha alterada com sucesso!", "success");
