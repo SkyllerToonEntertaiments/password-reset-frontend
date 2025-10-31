@@ -4,7 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Redefinir senha</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='14' font-size='14'%3E%F0%9F%94%92%3C/text%3E%3C/svg%3E">
   <style>
     :root{--bg:#f7fafc;--card:#fff;--accent:#0f172a;--muted:#64748b}
     body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;padding:24px;background:var(--bg);color:var(--accent)}
@@ -12,157 +11,86 @@
     h1{margin:0 0 10px;font-size:20px}
     p.lead{margin:0 0 18px;color:var(--muted)}
     label{display:block;margin-top:12px;font-size:13px;color:var(--muted)}
-    input[type="password"], input[type="text"]{width:100%;padding:10px 12px;margin-top:6px;border:1px solid #e6eef8;border-radius:8px;font-size:14px;background:#fbfdff}
+    input{width:100%;padding:10px 12px;margin-top:6px;border:1px solid #e6eef8;border-radius:8px;font-size:14px;background:#fbfdff}
     button{margin-top:18px;padding:10px 14px;border-radius:8px;border:0;background:#2563eb;color:#fff;font-weight:600;cursor:pointer}
     button[disabled]{opacity:0.6;cursor:not-allowed}
     .msg{margin-top:14px;padding:10px;border-radius:8px}
     .msg.success{background:#ecfdf5;color:#065f46}
     .msg.error{background:#fff1f2;color:#9f1239}
-    .hint{font-size:13px;color:var(--muted);margin-top:10px}
-    .small{font-size:13px;color:var(--muted)}
+    .small{font-size:13px;color:var(--muted);margin-top:10px}
     .hidden{display:none}
   </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <div class="container">
     <h1>Redefinir sua senha</h1>
-    <p class="lead">Se o link contiver <code>?access_token=...</code>, a página detecta automaticamente.</p>
+    <p class="lead">Digite a nova senha e confirme.</p>
 
-    <label for="urlInput">Link de reset (opcional)</label>
-    <input id="urlInput" type="text" placeholder="Cole a URL do e-mail aqui" />
-
-    <div id="tokenNotice" class="hint hidden">Token detectado — insira e confirme a nova senha.</div>
-
-    <div id="pwForm" class="hidden">
+    <div id="pwForm">
       <label for="newPassword">Nova senha</label>
       <input id="newPassword" type="password" autocomplete="new-password" />
+
       <label for="confirmPassword">Confirmar nova senha</label>
       <input id="confirmPassword" type="password" autocomplete="new-password" />
-      <button id="submitBtn">Redefinir senha</button>
-      <div id="message" class="msg hidden"></div>
-      <div id="finalNote" class="small hidden">✅ Senha alterada com sucesso. Agora você pode fazer login.</div>
-    </div>
 
-    <div id="noToken" class="hidden">
-      <p class="small">Se o token não foi detectado, solicite um novo link de recuperação.</p>
+      <button id="submitBtn">Redefinir senha</button>
+
+      <div id="message" class="msg hidden"></div>
+      <div id="finalNote" class="small hidden">
+        ✅ Senha alterada com sucesso. Agora você pode fazer login.
+      </div>
     </div>
   </div>
 
   <script>
-    (function () {
-      const SUPABASE_URL = 'https://hidlpxxbovmqrqgikess.supabase.co';
-      const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpZGxweHhib3ZtcXJxZ2lrZXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMTU5NDQsImV4cCI6MjA3NjY5MTk0NH0.auN-zYkqqBzSdcdHsOGU-PciX6LZiF19dtPmPOYZCZA'; // <<< COLOQUE A SUA ANON KEY AQUI ✅
+    const supabase = supabase.createClient(
+      'https://hidlpxxbovmqrqgikess.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpZGxweHhib3ZtcXJxZ2lrZXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMTU5NDQsImV4cCI6MjA3NjY5MTk0NH0.auN-zYkqqBzSdcdHsOGU-PciX6LZiF19dtPmPOYZCZA' // ✅ troque aqui pelo seu anon real
+    );
 
-      const $ = id => document.getElementById(id);
-      const show = el => el.classList.remove('hidden');
-      const hide = el => el.classList.add('hidden');
-      const setMsg = (text, type='error') => {
-        const m = $('message');
-        m.textContent = text;
-        m.className = 'msg ' + (type === 'success' ? 'success' : 'error');
-        show(m);
-      };
+    const $ = id => document.getElementById(id);
+    const show = el => el.classList.remove('hidden');
+    const hide = el => el.classList.add('hidden');
+    const setMsg = (text, type='error') => {
+      const m = $('message');
+      m.textContent = text;
+      m.className = 'msg ' + (type === 'success' ? 'success' : 'error');
+      show(m);
+    };
 
-      function getToken(urlString) {
-      try {
-        const u = urlString ? new URL(urlString, location.origin) : new URL(location.href);
-    
-        // ✅ 1) tenta pegar do search params (?access_token=)
-        let token = u.searchParams.get('access_token');
-        if (token) return token;
-    
-        // ✅ 2) tenta pegar do hash (#access_token=)
-        const hash = u.hash?.substring(1) || ""; // remove #
-        const hashParams = new URLSearchParams(hash);
-        return hashParams.get('access_token');
-    
-      } catch {
-        return null;
-      }
+    function validate(pw, pw2) {
+      if (!pw || pw.length < 8) return 'A senha deve ter ao menos 8 caracteres.';
+      if (pw !== pw2) return 'As senhas não conferem.';
+      return null;
     }
 
-      const urlInput = $('urlInput');
-      const pwForm = $('pwForm');
-      const tokenNotice = $('tokenNotice');
-      const noToken = $('noToken');
-      const submitBtn = $('submitBtn');
-      const newPassword = $('newPassword');
-      const confirmPassword = $('confirmPassword');
-      const finalNote = $('finalNote');
+    $('submitBtn').addEventListener('click', async () => {
+      hide($('message'));
 
-      let token = getToken();
+      const pw = $('newPassword').value.trim();
+      const pw2 = $('confirmPassword').value.trim();
+      const err = validate(pw, pw2);
+      if (err) return setMsg(err);
 
-      if (token) {
-        urlInput.value = location.href;
-        show(tokenNotice);
-        show(pwForm);
-      } else {
-        show(noToken);
+      const btn = $('submitBtn');
+      btn.disabled = true;
+      btn.textContent = 'Aguarde...';
+
+      try {
+        const { error } = await supabase.auth.updateUser({ password: pw });
+        if (error) throw error;
+
+        setMsg('Senha alterada com sucesso!', 'success');
+        show($('finalNote'));
+      } catch (e) {
+        setMsg(e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Redefinir senha';
       }
-
-      urlInput.addEventListener('change', (e) => {
-        token = getToken(e.target.value.trim());
-        if (token) {
-          hide(noToken);
-          show(tokenNotice);
-          show(pwForm);
-        } else {
-          hide(tokenNotice);
-          hide(pwForm);
-          show(noToken);
-        }
-      });
-
-      function validate(pw, pw2) {
-        if (!pw || pw.length < 8) return 'A senha deve ter ao menos 8 caracteres.';
-        if (pw !== pw2) return 'As senhas não conferem.';
-        return null;
-      }
-
-      async function resetPassword(accessToken, password) {
-        const endpoint = SUPABASE_URL + '/auth/v1/user';
-        const res = await fetch(endpoint, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + accessToken,
-            'apikey': SUPABASE_ANON_KEY,
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({ password })
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data?.error_description || data?.message || 'Erro ao redefinir a senha.');
-        return data;
-      }
-
-      submitBtn.addEventListener('click', async () => {
-        hide($('message'));
-
-        if (!token) return setMsg('Token não encontrado.');
-
-        const pw = newPassword.value.trim();
-        const pw2 = confirmPassword.value.trim();
-
-        const err = validate(pw, pw2);
-        if (err) return setMsg(err);
-
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Aguarde...';
-
-        try {
-          await resetPassword(token, pw);
-          setMsg('Senha alterada com sucesso!', 'success');
-          show(finalNote);
-          newPassword.value = confirmPassword.value = '';
-        } catch (e) {
-          setMsg(e.message);
-        } finally {
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Redefinir senha';
-        }
-      });
-    })();
+    });
   </script>
 </body>
 </html>
