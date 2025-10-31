@@ -1,96 +1,103 @@
-<script type="module">
-  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Redefinir senha</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='14' font-size='14'%3E%F0%9F%94%92%3C/text%3E%3C/svg%3E">
+  <style>
+    :root{--bg:#f7fafc;--card:#fff;--accent:#0f172a;--muted:#64748b}
+    body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;padding:24px;background:var(--bg);color:var(--accent)}
+    .container{max-width:480px;margin:40px auto;background:var(--card);padding:28px;border-radius:12px;box-shadow:0 8px 30px rgba(2,6,23,0.08)}
+    h1{margin:0 0 10px;font-size:20px}
+    p.lead{margin:0 0 18px;color:var(--muted)}
+    label{display:block;margin-top:12px;font-size:13px;color:var(--muted)}
+    input[type="password"], input[type="text"]{width:100%;padding:10px 12px;margin-top:6px;border:1px solid #e6eef8;border-radius:8px;font-size:14px;background:#fbfdff}
+    button{margin-top:18px;padding:10px 14px;border-radius:8px;border:0;background:#2563eb;color:#fff;font-weight:600;cursor:pointer}
+    button[disabled]{opacity:0.6;cursor:not-allowed}
+    .msg{margin-top:14px;padding:10px;border-radius:8px}
+    .msg.success{background:#ecfdf5;color:#065f46}
+    .msg.error{background:#fff1f2;color:#9f1239}
+    .hint{font-size:13px;color:var(--muted);margin-top:10px}
+    .small{font-size:13px;color:var(--muted)}
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Redefinir sua senha</h1>
+    <p class="lead">Digite sua nova senha e confirme.</p>
 
-  const SUPABASE_URL = 'https://hidlpxxbovmqrqgikess.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpZGxweHhib3ZtcXJxZ2lrZXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMTU5NDQsImV4cCI6MjA3NjY5MTk0NH0.auN-zYkqqBzSdcdHsOGU-PciX6LZiF19dtPmPOYZCZA'; // COLOQUE A SUA ✅
+    <div id="pwForm">
+      <label for="newPassword">Nova senha</label>
+      <input id="newPassword" type="password" autocomplete="new-password" />
+      <label for="confirmPassword">Confirmar nova senha</label>
+      <input id="confirmPassword" type="password" autocomplete="new-password" />
+      <button id="submitBtn">Redefinir senha</button>
+      <div id="message" class="msg hidden"></div>
+      <div id="finalNote" class="small hidden">✅ Senha alterada com sucesso. Agora você pode fazer login.</div>
+    </div>
+  </div>
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  <!-- ✅ Carrega Supabase JS antes do script -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  const $ = id => document.getElementById(id);
-  const show = el => el.classList.remove('hidden');
-  const hide = el => el.classList.add('hidden');
-  const setMsg = (text, type='error') => {
-    const m = $('message');
-    m.textContent = text;
-    m.className = 'msg ' + (type === 'success' ? 'success' : 'error');
-    show(m);
-  };
+  <!-- ✅ Seu script — sempre no FINAL do BODY -->
+  <script type="module">
+    const SUPABASE_URL = "https://hidlpxxbovmqrqgikess.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpZGxweHhib3ZtcXJxZ2lrZXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMTU5NDQsImV4cCI6MjA3NjY5MTk0NH0.auN-zYkqqBzSdcdHsOGU-PciX6LZiF19dtPmPOYZCZA"; // ✅ TROQUE!
 
-  function getToken(urlString) {
-    try {
-      const u = urlString ? new URL(urlString, location.origin) : new URL(location.href);
-      return u.searchParams.get('access_token');
-    } catch { return null; }
-  }
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  const urlInput = $('urlInput');
-  const pwForm = $('pwForm');
-  const tokenNotice = $('tokenNotice');
-  const noToken = $('noToken');
-  const submitBtn = $('submitBtn');
-  const newPassword = $('newPassword');
-  const confirmPassword = $('confirmPassword');
-  const finalNote = $('finalNote');
+    const $ = id => document.getElementById(id);
+    const show = el => el.classList.remove('hidden');
+    const hide = el => el.classList.add('hidden');
 
-  let token = getToken();
+    const message = $('message');
+    const finalNote = $('finalNote');
+    const newPassword = $('newPassword');
+    const confirmPassword = $('confirmPassword');
+    const submitBtn = $('submitBtn');
 
-  if (token) {
-    urlInput.value = location.href;
-    show(tokenNotice);
-    show(pwForm);
-  } else {
-    show(noToken);
-  }
-
-  urlInput.addEventListener('change', (e) => {
-    token = getToken(e.target.value.trim());
-    if (token) {
-      hide(noToken);
-      show(tokenNotice);
-      show(pwForm);
-    } else {
-      hide(tokenNotice);
-      hide(pwForm);
-      show(noToken);
+    function setMsg(text, type = 'error') {
+      message.textContent = text;
+      message.className = 'msg ' + (type === 'success' ? 'success' : 'error');
+      show(message);
     }
-  });
 
-  function validate(pw, pw2) {
-    if (!pw || pw.length < 8) return 'A senha deve ter ao menos 8 caracteres.';
-    if (pw !== pw2) return 'As senhas não conferem.';
-    return null;
-  }
-
-  submitBtn.addEventListener('click', async () => {
-    hide($('message'));
-
-    if (!token) return setMsg('Token não encontrado.');
-
-    const pw = newPassword.value.trim();
-    const pw2 = confirmPassword.value.trim();
-
-    const err = validate(pw, pw2);
-    if (err) return setMsg(err);
-
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Aguarde...';
-
-    try {
-      // ✅ Aqui a mágica: o SDK usa o token automaticamente da URL!
-      const { error } = await supabase.auth.updateUser({
-        password: pw
-      });
-
-      if (error) throw error;
-
-      setMsg('Senha alterada com sucesso!', 'success');
-      show(finalNote);
-      newPassword.value = confirmPassword.value = '';
-    } catch (e) {
-      setMsg(e.message);
-    } finally {
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Redefinir senha';
+    function validate(pw, pw2) {
+      if (!pw || pw.length < 8) return 'A senha deve ter ao menos 8 caracteres.';
+      if (pw !== pw2) return 'As senhas não conferem.';
+      return null;
     }
-  });
-</script>
+
+    submitBtn.addEventListener("click", async () => {
+      hide(message);
+
+      const pw = newPassword.value.trim();
+      const pw2 = confirmPassword.value.trim();
+      const err = validate(pw, pw2);
+      if (err) return setMsg(err);
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Aguarde...";
+
+      try {
+        const { error } = await supabase.auth.updateUser({ password: pw });
+        
+        if (error) throw error;
+
+        setMsg("Senha alterada com sucesso!", "success");
+        show(finalNote);
+
+        newPassword.value = confirmPassword.value = "";
+      } catch (err) {
+        setMsg(err.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Redefinir senha";
+      }
+    });
+  </script>
+</body>
+</html>
