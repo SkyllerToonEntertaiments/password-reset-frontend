@@ -47,7 +47,7 @@
     const SUPABASE_URL = "https://hidlpxxbovmqrqgikess.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpZGxweHhib3ZtcXJxZ2lrZXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMTU5NDQsImV4cCI6MjA3NjY5MTk0NH0.auN-zYkqqBzSdcdHsOGU-PciX6LZiF19dtPmPOYZCZA"; // ✅ TROQUE!
 
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const $ = id => document.getElementById(id);
     const show = el => el.classList.remove('hidden');
@@ -83,7 +83,7 @@
       submitBtn.textContent = "Aguarde...";
 
       try {
-        const { error } = await supabase.auth.updateUser({ password: pw });
+        const { error } = await client.auth.updateUser({ password: pw });
         
         if (error) throw error;
 
